@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Examples - PyNurseInjector</title>
+    <meta name="description" content="Real-world examples and code samples for PyNurseInjector (DotNurseInjector) - see how to implement dependency injection in various scenarios.">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <i class="fas fa-syringe"></i>
+                <span>PyNurseInjector</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="getting-started.html">Getting Started</a></li>
+                <li><a href="features.html">Features</a></li>
+                <li><a href="examples.html" class="active">Examples</a></li>
+                <li><a href="api-reference.html">API Reference</a></li>
+                <li><a href="https://github.com/enisn/DotNurseInjector" target="_blank"><i class="fab fa-github"></i></a></li>
+            </ul>
+            <div class="nav-toggle">
+                <i class="fas fa-bars"></i>
+            </div>
+        </div>
+    </nav>
+
+    <div class="docs-container">
+        <aside class="docs-sidebar">
+            <h3>Examples</h3>
+            <ul>
+                <li><a href="#basic-web-api">Basic Web API</a></li>
+                <li><a href="#repository-pattern">Repository Pattern</a></li>
+                <li><a href="#multi-layer">Multi-Layer Architecture</a></li>
+                <li><a href="#background-services">Background Services</a></li>
+                <li><a href="#unit-testing">Unit Testing</a></li>
+                <li><a href="#advanced-scenarios">Advanced Scenarios</a></li>
+                <li><a href="#migration-guide">Migration Guide</a></li>
+            </ul>
+        </aside>
+
+        <main class="docs-content">
+            <h1>Real-World Examples</h1>
+            <p>Learn how to use PyNurseInjector in various scenarios with these practical examples.</p>
+
+            <section id="basic-web-api">
+                <h2><i class="fas fa-globe"></i> Basic Web API Example</h2>
+                <p>A simple Web API project demonstrating basic PyNurseInjector setup.</p>
+
+                <div class="example-section">
+                    <h3>Project Structure</h3>
+                    <div class="code-block">
+                        <pre><code class="language-plaintext">BookStore.Api/
+├── Controllers/
+│   └── BooksController.cs
+├── Services/
+│   ├── IBookService.cs
+│   └── BookService.cs
+├── Repositories/
+│   ├── IBookRepository.cs
+│   └── BookRepository.cs
+├── Models/
+│   └── Book.cs
+└── Program.cs</code></pre>
+                    </div>
+
+                    <h3>Program.cs</h3>
+                    <div class="code-block">
+                        <pre><code class="language-csharp">using DotNurse.Injector;
+using DotNurse.Injector.AspNetCore;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Enable property injection
+builder.Host.UseDotNurseInjector();
+
+// Add services
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+// Register all services and repositories
+builder.Services.AddServicesFrom("BookStore.Api.Services");
+builder.Services.AddServicesFrom("BookStore.Api.Repositories", ServiceLifetime.Scoped);
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseHttpsRedirection();
+app.UseAuthorization();
+app.MapControllers();
+
+app.Run();</code></pre>
+                    </div>
+
+                    <h3>Models/Book.cs</h3>
+                    <div class="code-block">
+                        <pre><code class="language-csharp">namespace BookStore.Api.Models;
+
+public class Book
+{
+    public int Id { get; set; }
+    public string Title { get; set; }
+    public string Author { get; set; }
+    public string ISBN { get; set; }
+    public decimal Price { get; set; }
+    public DateTime PublishedDate { get; set; }
+}</code></pre>
+                    </div>
+
+                    <h3>Services/IBookService.cs & BookService.cs</h3>
+                    <div class="code-block">
+                        <pre><code class="language-csharp">namespace BookStore.Api.Services;
+
+public interface IBookService
+{
+    Task&lt;IEnumerable&lt;Book&gt;&gt; GetAllBooksAsync();
+    Task&lt;Book&gt; GetBookByIdAsync(int id);
+    Task&lt;Book&gt; CreateBookAsync(Book book);
+    Task&lt;Book&gt; UpdateBookAsync(int id, Book book);
+    Task DeleteBookAsync(int id);
+}
+
+public class BookService : IBookService
+{
+    [InjectService] 
+    private readonly IBookRepository bookRepository;
+    
+    [InjectService] 
+    private readonly ILogger&lt;BookService&gt; logger;
+
+    public async Task&lt;IEnumerable&lt;Book&gt;&gt; GetAllBooksAsync()
+    {
+        logger.LogInformation("Fetching all books");
+        return await bookRepository.GetAllAsync();
+    }
+
+    public async Task&lt;Book&gt; GetBookByIdAsync(int id)
+    {
+        logger.LogInformation("Fetching book with ID: {BookId}", id);
+        var book = await bookRepository.GetByIdAsync(id);
+        if (book == null)
+        {
+            logger.LogWarning("Book with ID {BookId} not found", id);
+            throw new KeyNotFoundException($"Book with ID {id} not found");
+        }
+        return book;
+    }
+
+    public async Task&lt;Book&gt; CreateBookAsync(Book book)
+    {
+        logger.LogInformation("Creating new book: {Title}", book.Title);
+        return await bookRepository.CreateAsync(book);
+    }
+
+    public async Task&lt;Book&gt; UpdateBookAsync(int id, Book book)
+    {
+        logger.LogInformation("Updating book with ID: {BookId}", id);
+        book.Id = id;
+        return await bookRepository.UpdateAsync(book);
+    }
+
+    public async Task DeleteBookAsync(int id)
+    {
+        logger.LogInformation("Deleting book with ID: {BookId}", id);
+        await bookRepository.DeleteAsync(id);
+    }
+}</code></pre>
+                    </div>
+
+                    <h3>Controllers/BooksController.cs</h3>
+                    <div class="code-block">
+                        <pre><code class="language-csharp">namespace BookStore.Api.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class BooksController : ControllerBase
+{
+    [InjectService] 
+    public IBookService BookService { get; private set; }
+
+    [HttpGet]
+    public async Task&lt;ActionResult&lt;IEnumerable&lt;Book&gt;&gt;&gt; GetBooks()
+    {
+        var books = await BookService.GetAllBooksAsync();
+        return Ok(books);
+    }
+
+    [HttpGet("{id}")]
+    public async Task&lt;ActionResult&lt;Book&gt;&gt; GetBook(int id)
+    {
+        try
+        {
+            var book = await BookService.GetBookByIdAsync(id);
+            return Ok(book);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
+    [HttpPost]
+    public async Task&lt;ActionResult&lt;Book&gt;&gt; CreateBook(Book book)
+    {
+        var createdBook = await BookService.CreateBookAsync(book);
+        return CreatedAtAction(nameof(GetBook), new { id = createdBook.Id }, createdBook);
+    }
+
+    [HttpPut("{id}")]
+    public async Task&lt;IActionResult&gt; UpdateBook(int id, Book book)
+    {
+        try
+        {
+            await BookService.UpdateBookAsync(id, book);
+            return NoContent();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
+    [HttpDelete("{id}")]
+    public async Task&lt;IActionResult&gt; DeleteBook(int id)
+    {
+        try
+        {
+            await BookService.DeleteBookAsync(id);
+            return NoContent();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+}</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <section id="repository-pattern">
+                <h2><i class="fas fa-database"></i> Repository Pattern Example</h2>
+                <p>Implementing a generic repository pattern with PyNurseInjector.</p>
+
+                <div class="example-section">
+                    <h3>Generic Repository Interface</h3>
+                    <div class="code-block">
+                        <pre><code class="language-csharp">namespace MyApp.Core.Repositories;
+
+public interface IRepository&lt;T&gt; where T : class
+{
+    Task&lt;T&gt; GetByIdAsync(int id);
+    Task&lt;IEnumerable&lt;T&gt;&gt; GetAllAsync();
+    Task&lt;IEnumerable&lt;T&gt;&gt; FindAsync(Expression&lt;Func&lt;T, bool&gt;&gt; predicate);
+    Task&lt;T&gt; AddAsync(T entity);
+    Task UpdateAsync(T entity);
+    Task DeleteAsync(T entity);
+    Task&lt;int&gt; SaveChangesAsync();
+}
+
+public interface IUserRepository : IRepository&lt;User&gt;
+{
+    Task&lt;User&gt; GetByEmailAsync(string email);
+    Task&lt;IEnumerable&lt;User&gt;&gt; GetActiveUsersAsync();
+}
+
+public interface IProductRepository : IRepository&lt;Product&gt;
+{
+    Task&lt;IEnumerable&lt;Product&gt;&gt; GetByCategoryAsync(string category);
+    Task&lt;IEnumerable&lt;Product&gt;&gt; GetTopSellingAsync(int count);
+}</code></pre>
+                    </div>
+
+                    <h3>Base Repository Implementation</h3>
+                    <div class="code-block">
+                        <pre><code class="language-csharp">namespace MyApp.Infrastructure.Repositories;
+
+public abstract class BaseRepository&lt;T&gt; : IRepository&lt;T&gt; where T : class
+{
+    [InjectService] 
+    protected AppDbContext Context { get; private set; }
+    
+    [InjectService] 
+    protected ILogger&lt;BaseRepository&lt;T&gt;&gt; Logger { get; private set; }
+
+    protected DbSet&lt;T&gt; DbSet => Context.Set&lt;T&gt;();
+
+    public virtual async Task&lt;T&gt; GetByIdAsync(int id)
+    {
+        return await DbSet.FindAsync(id);
+    }
+
+    public virtual async Task&lt;IEnumerable&lt;T&gt;&gt; GetAllAsync()
+    {
+        return await DbSet.ToListAsync();
+    }
+
+    public virtual async Task&lt;IEnumerable&lt;T&gt;&gt; FindAsync(Expression&lt;Func&lt;T, bool&gt;&gt; predicate)
+    {
+        return await DbSet.Where(predicate).ToListAsync();
+    }
+
+    public virtual async Task&lt;T&gt; AddAsync(T entity)
+    {
+        await DbSet.AddAsync(entity);
+        return entity;
+    }
+
+    public virtual async Task UpdateAsync(T entity)
+    {
+        DbSet.Update(entity);
+    }
+
+    public virtual async Task DeleteAsync(T entity)
+    {
+        DbSet.Remove(entity);
+    }
+
+    public async Task&lt;int&gt; SaveChangesAsync()
+    {
+        return await Context.SaveChangesAsync();
+    }
+}</code></pre>
+                    </div>
+
+                    <h3>Specific Repository Implementations</h3>
+                    <div class="code-block">
+                        <pre><code class="language-csharp">namespace MyApp.Infrastructure.Repositories;
+
+[RegisterAs(typeof(IUserRepository))]
+[ServiceLifeTime(ServiceLifetime.Scoped)]
+public class UserRepository : BaseRepository&lt;User&gt;, IUserRepository
+{
+    public async Task&lt;User&gt; GetByEmailAsync(string email)
+    {
+        Logger.LogDebug("Getting user by email: {Email}", email);
+        return await DbSet.FirstOrDefaultAsync(u => u.Email == email);
+    }
+
+    public async Task&lt;IEnumerable&lt;User&gt;&gt; GetActiveUsersAsync()
+    {
+        return await DbSet
+            .Where(u => u.IsActive && !u.IsDeleted)
+            .OrderBy(u => u.Name)
+            .ToListAsync();
+    }
+}
+
+[RegisterAs(typeof(IProductRepository))]
+[ServiceLifeTime(ServiceLifetime.Scoped)]
+public class ProductRepository : BaseRepository&lt;Product&gt;, IProductRepository
+{
+    public async Task&lt;IEnumerable&lt;Product&gt;&gt; GetByCategoryAsync(string category)
+    {
+        return await DbSet
+            .Where(p => p.Category == category && p.IsAvailable)
+            .ToListAsync();
+    }
+
+    public async Task&lt;IEnumerable&lt;Product&gt;&gt; GetTopSellingAsync(int count)
+    {
+        return await DbSet
+            .OrderByDescending(p => p.SalesCount)
+            .Take(count)
+            .ToListAsync();
+    }
+}</code></pre>
+                    </div>
+
+                    <h3>Registration</h3>
+                    <div class="code-block">
+                        <pre><code class="language-csharp">// In Program.cs
+builder.Services.AddDbContext&lt;AppDbContext&gt;(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Register all repositories that inherit from BaseRepository
+builder.Services.AddServicesFrom("MyApp.Infrastructure.Repositories", ServiceLifetime.Scoped, options =>
+{
+    options.ImplementationBase = typeof(BaseRepository&lt;&gt;);
+});</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <section id="multi-layer">
+                <h2><i class="fas fa-layer-group"></i> Multi-Layer Architecture</h2>
+                <p>Complete example of a multi-layered application using PyNurseInjector.</p>
+
+                <div class="example-section">
+                    <h3>Solution Structure</h3>
+                    <div class="code-block">
+                        <pre><code class="language-plaintext">MyEcommerce/
+├── MyEcommerce.Domain/          # Domain entities and interfaces
+│   ├── Entities/
+│   ├── Interfaces/
+│   └── ValueObjects/
+├── MyEcommerce.Application/     # Business logic and DTOs
+│   ├── Services/
+│   ├── DTOs/
+│   └── Mappings/
+├── MyEcommerce.Infrastructure/  # Data access and external services
+│   ├── Repositories/
+│   ├── Services/
+│   └── DbContext/
+└── MyEcommerce.Api/            # Web API layer
+    ├── Controllers/
+    ├── Middleware/
+    └── Program.cs</code></pre>
+                    </div>
+
+                    <h3>Domain Layer</h3>
+                    <div class="code-block">
+                        <pre><code class="language-csharp">// MyEcommerce.Domain/Interfaces/IOrderService.cs
+namespace MyEcommerce.Domain.Interfaces;
+
+public interface IOrderService
+{
+    Task&lt;Order&gt; CreateOrderAsync(CreateOrderDto orderDto);
+    Task&lt;Order&gt; GetOrderByIdAsync(int orderId);
+    Task&lt;bool&gt; ProcessPaymentAsync(int orderId, PaymentDto paymentDto);
+    Task UpdateOrderStatusAsync(int orderId, OrderStatus status);
+}
+
+// MyEcommerce.Domain/Interfaces/IInventoryService.cs
+public interface IInventoryService
+{
+    Task&lt;bool&gt; CheckAvailabilityAsync(int productId, int quantity);
+    Task ReserveStockAsync(int productId, int quantity);
+    Task ReleaseStockAsync(int productId, int quantity);
+}</code></pre>
+                    </div>
+
+                    <h3>Application Layer</h3>
+                    <div class="code-block">
+                        <pre><code class="language-csharp">// MyEcommerce.Application/Services/OrderService.cs
+namespace MyEcommerce.Application.Services;
+
+[RegisterAs(typeof(IOrderService))]
+[ServiceLifeTime(ServiceLifetime.Scoped)]
+public class OrderService : IOrderService
+{
+    [InjectService] private IOrderRepository orderRepository;
+    [InjectService] private IProductRepository productRepository;
+    [InjectService] private IInventoryService inventoryService;
+    [InjectService] private IPaymentService paymentService;
+    [InjectService] private INotificationService notificationService;
+    [InjectService] private ILogger&lt;OrderService&gt; logger;
+
+    public async Task&lt;Order&gt; CreateOrderAsync(CreateOrderDto orderDto)
+    {
+        logger.LogInformation("Creating order for customer {CustomerId}", orderDto.CustomerId);
+        
+        // Validate products availability
+        foreach (var item in orderDto.Items)
+        {
+            var isAvailable = await inventoryService.CheckAvailabilityAsync(item.ProductId, item.Quantity);
+            if (!isAvailable)
+            {
+                throw new BusinessException($"Product {item.ProductId} is not available");
+            }
+        }
+
+        // Reserve inventory
+        foreach (var item in orderDto.Items)
+        {
+            await inventoryService.ReserveStockAsync(item.ProductId, item.Quantity);
+        }
+
+        // Create order
+        var order = new Order
+        {
+            CustomerId = orderDto.CustomerId,
+            OrderDate = DateTime.UtcNow,
+            Status = OrderStatus.Pending,
+            Items = orderDto.Items.Select(i => new OrderItem
+            {
+                ProductId = i.ProductId,
+                Quantity = i.Quantity,
+                Price = i.Price
+            }).ToList()
+        };
+
+        await orderRepository.AddAsync(order);
+        await orderRepository.SaveChangesAsync();
+
+        // Send notification
+        await notificationService.SendOrderConfirmationAsync(order);
+
+        return order;
+    }
+
+    public async Task&lt;bool&gt; ProcessPaymentAsync(int orderId, PaymentDto paymentDto)
+    {
+        var order = await orderRepository.GetByIdAsync(orderId);
+        if (order == null)
+        {
+            throw new NotFoundException($"Order {orderId} not found");
+        }
+
+        var paymentResult = await paymentService.ProcessPaymentAsync(order, paymentDto);
+        
+        if (paymentResult.Success)
+        {
+            order.Status = OrderStatus.Paid;
+            order.PaymentId = paymentResult.TransactionId;
+            await orderRepository.UpdateAsync(order);
+            await orderRepository.SaveChangesAsync();
+            
+            await notificationService.SendPaymentConfirmationAsync(order);
+        }
+
+        return paymentResult.Success;
+    }
+}</code></pre>
+                    </div>
+
+                    <h3>Infrastructure Layer</h3>
+                    <div class="code-block">
+                        <pre><code class="language-csharp">// MyEcommerce.Infrastructure/Services/EmailNotificationService.cs
+namespace MyEcommerce.Infrastructure.Services;
+
+[RegisterAs(typeof(INotificationService))]
+[ServiceLifeTime(ServiceLifetime.Singleton)]
+public class EmailNotificationService : INotificationService
+{
+    [InjectService] private IEmailSender emailSender;
+    [InjectService] private ITemplateEngine templateEngine;
+    [InjectService] private IConfiguration configuration;
+
+    public async Task SendOrderConfirmationAsync(Order order)
+    {
+        var template = await templateEngine.RenderAsync("OrderConfirmation", order);
+        var email = new EmailMessage
+        {
+            To = order.Customer.Email,
+            Subject = $"Order Confirmation - #{order.Id}",
+            Body = template
+        };
+        
+        await emailSender.SendAsync(email);
+    }
+
+    public async Task SendPaymentConfirmationAsync(Order order)
+    {
+        var template = await templateEngine.RenderAsync("PaymentConfirmation", order);
+        var email = new EmailMessage
+        {
+            To = order.Customer.Email,
+            Subject = $"Payment Confirmation - Order #{order.Id}",
+            Body = template
+        };
+        
+        await emailSender.SendAsync(email);
+    }
+}</code></pre>
+                    </div>
+
+                    <h3>API Layer Configuration</h3>
+                    <div class="code-block">
+                        <pre><code class="language-csharp">// MyEcommerce.Api/Program.cs
+var builder = WebApplication.CreateBuilder(args);
+
+// Enable property injection
+builder.Host.UseDotNurseInjector();
+
+// Add services
+builder.Services.AddControllers();
+builder.Services.AddDbContext&lt;AppDbContext&gt;(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Register services from all layers
+builder.Services.AddServicesFrom("MyEcommerce.Application.Services", ServiceLifetime.Scoped);
+builder.Services.AddServicesFrom("MyEcommerce.Infrastructure.Repositories", ServiceLifetime.Scoped);
+builder.Services.AddServicesFrom("MyEcommerce.Infrastructure.Services", ServiceLifetime.Singleton);
+
+// Add AutoMapper
+builder.Services.AddAutoMapper(typeof(MappingProfile));
+
+// Add authentication
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        // JWT configuration
+    });
+
+var app = builder.Build();
+
+// Middleware pipeline
+app.UseExceptionHandler("/error");
+app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapControllers();
+
+app.Run();</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <section id="background-services">
+                <h2><i class="fas fa-cogs"></i> Background Services Example</h2>
+                <p>Using PyNurseInjector with hosted services and background tasks.</p>
+
+                <div class="example-section">
+                    <h3>Order Processing Background Service</h3>
+                    <div class="code-block">
+                        <pre><code class="language-csharp">namespace MyApp.Services.Background;
+
+[RegisterAs(typeof(IHostedService))]
+[ServiceLifeTime(ServiceLifetime.Singleton)]
+public class OrderProcessingService : BackgroundService
+{
+    [InjectService] private IServiceProvider serviceProvider;
+    [InjectService] private ILogger&lt;OrderProcessingService&gt; logger;
+    [InjectService] private IConfiguration configuration;
+
+    private readonly TimeSpan _period;
+
+    public OrderProcessingService()
+    {
+        _period = TimeSpan.FromMinutes(5); // Process every 5 minutes
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        logger.LogInformation("Order Processing Service is starting.");
+
+        using PeriodicTimer timer = new(_period);
+        
+        while (!stoppingToken.IsCancellationRequested &&
+               await timer.WaitForNextTickAsync(stoppingToken))
+        {
+            await ProcessPendingOrdersAsync(stoppingToken);
+        }
+    }
+
+    private async Task ProcessPendingOrdersAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var scope = serviceProvider.CreateScope();
+            
+            // Resolve scoped services
+            var orderService = scope.ServiceProvider.GetRequiredService&lt;IOrderService&gt;();
+            var orderRepository = scope.ServiceProvider.GetRequiredService&lt;IOrderRepository&gt;();
+            
+            var pendingOrders = await orderRepository.GetPendingOrdersAsync();
+            
+            logger.LogInformation("Processing {Count} pending orders", pendingOrders.Count());
+            
+            foreach (var order in pendingOrders)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                    break;
+                    
+                try
+                {
+                    await orderService.ProcessOrderAsync(order.Id);
+                    logger.LogInformation("Successfully processed order {OrderId}", order.Id);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Error processing order {OrderId}", order.Id);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error in order processing service");
+        }
+    }
+}</code></pre>
+                    </div>
+
+                    <h3>Email Queue Service</h3>
+                    <div class="code-block">
+                        <pre><code class="language-csharp">[RegisterAs(typeof(IHostedService))]
+[ServiceLifeTime(ServiceLifetime.Singleton)]
+public class EmailQueueService : BackgroundService
+{
+    [InjectService] private IEmailQueue emailQueue;
+    [InjectService] private IEmailSender emailSender;
+    [InjectService] private ILogger&lt;EmailQueueService&gt; logger;
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        logger.LogInformation("Email Queue Service is starting.");
+
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                var email = await emailQueue.DequeueAsync(stoppingToken);
+                
+                if (email != null)
+                {
+                    await SendEmailWithRetryAsync(email, stoppingToken);
+                }
+                else
+                {
+                    // No emails in queue, wait a bit
+                    await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Service is stopping
+                break;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error in email queue service");
+                await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
+            }
+        }
+    }
+
+    private async Task SendEmailWithRetryAsync(EmailMessage email, CancellationToken cancellationToken)
+    {
+        const int maxRetries = 3;
+        var retryCount = 0;
+
+        while (retryCount < maxRetries)
+        {
+            try
+            {
+                await emailSender.SendAsync(email);
+                logger.LogInformation("Email sent successfully to {Recipient}", email.To);
+                break;
+            }
+            catch (Exception ex)
+            {
+                retryCount++;
+                logger.LogWarning(ex, "Failed to send email (attempt {Attempt}/{MaxAttempts})", 
+                    retryCount, maxRetries);
+
+                if (retryCount >= maxRetries)
+                {
+                    logger.LogError("Failed to send email after {MaxAttempts} attempts", maxRetries);
+                    // Could move to dead letter queue here
+                    break;
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, retryCount)), cancellationToken);
+            }
+        }
+    }
+}</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <section id="unit-testing">
+                <h2><i class="fas fa-vial"></i> Unit Testing with PyNurseInjector</h2>
+                <p>How to write unit tests for services using PyNurseInjector.</p>
+
+                <div class="example-section">
+                    <h3>Test Setup</h3>
+                    <div class="code-block">
+                        <pre><code class="language-csharp">using Microsoft.Extensions.DependencyInjection;
+using Xunit;
+using Moq;
+
+public class ServiceTestBase : IDisposable
+{
+    protected IServiceProvider ServiceProvider { get; }
+    protected IServiceCollection Services { get; }
+
+    public ServiceTestBase()
+    {
+        Services = new ServiceCollection();
+        
+        // Add logging
+        Services.AddLogging(builder => builder.AddDebug());
+        
+        // Register test services
+        RegisterTestServices();
+        
+        // Build service provider
+        ServiceProvider = Services.BuildServiceProvider();
+    }
+
+    protected virtual void RegisterTestServices()
+    {
+        // Override in derived classes
+    }
+
+    protected T GetService&lt;T&gt;() where T : notnull
+    {
+        return ServiceProvider.GetRequiredService&lt;T&gt;();
+    }
+
+    public void Dispose()
+    {
+        if (ServiceProvider is IDisposable disposable)
+        {
+            disposable.Dispose();
+        }
+    }
+}</code></pre>
+                    </div>
+
+                    <h3>Testing Services with Mocked Dependencies</h3>
+                    <div class="code-block">
+                        <pre><code class="language-csharp">public class BookServiceTests : ServiceTestBase
+{
+    private readonly Mock&lt;IBookRepository&gt; _bookRepositoryMock;
+    private readonly Mock&lt;ILogger&lt;BookService&gt;&gt; _loggerMock;
+
+    public BookServiceTests()
+    {
+        _bookRepositoryMock = new Mock&lt;IBookRepository&gt;();
+        _loggerMock = new Mock&lt;ILogger&lt;BookService&gt;&gt;();
+    }
+
+    protected override void RegisterTestServices()
+    {
+        // Register mocks
+        Services.AddSingleton(_bookRepositoryMock.Object);
+        Services.AddSingleton(_loggerMock.Object);
+        
+        // Register service under test
+        Services.AddTransient&lt;BookService&gt;();
+        
+        // Enable property injection for tests
+        Services.AddSingleton&lt;IServiceProvider&gt;(provider => 
+            new DotNurseServiceProvider(provider));
+    }
+
+    [Fact]
+    public async Task GetBookByIdAsync_WhenBookExists_ReturnsBook()
+    {
+        // Arrange
+        var bookId = 1;
+        var expectedBook = new Book 
+        { 
+            Id = bookId, 
+            Title = "Test Book",
+            Author = "Test Author" 
+        };
+        
+        _bookRepositoryMock
+            .Setup(x => x.GetByIdAsync(bookId))
+            .ReturnsAsync(expectedBook);
+
+        var bookService = GetService&lt;BookService&gt;();
+
+        // Act
+        var result = await bookService.GetBookByIdAsync(bookId);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(expectedBook.Id, result.Id);
+        Assert.Equal(expectedBook.Title, result.Title);
+        
+        _bookRepositoryMock.Verify(x => x.GetByIdAsync(bookId), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetBookByIdAsync_WhenBookNotFound_ThrowsException()
+    {
+        // Arrange
+        var bookId = 999;
+        
+        _bookRepositoryMock
+            .Setup(x => x.GetByIdAsync(bookId))
+            .ReturnsAsync((Book)null);
+
+        var bookService = GetService&lt;BookService&gt;();
+
+        // Act & Assert
+        await Assert.ThrowsAsync&lt;KeyNotFoundException&gt;(
+            () => bookService.GetBookByIdAsync(bookId));
+        
+        _loggerMock.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny&lt;EventId&gt;(),
+                It.Is&lt;It.IsAnyType&gt;((o, t) => o.ToString().Contains($"Book with ID {bookId} not found")),
+                It.IsAny&lt;Exception&gt;(),
+                It.IsAny&lt;Func&lt;It.IsAnyType, Exception, string&gt;&gt;()),
+            Times.Once);
+    }
+}</code></pre>
+                    </div>
+
+                    <h3>Integration Testing</h3>
+                    <div class="code-block">
+                        <pre><code class="language-csharp">public class BookApiIntegrationTests : IClassFixture&lt;WebApplicationFactory&lt;Program&gt;&gt;
+{
+    private readonly WebApplicationFactory&lt;Program&gt; _factory;
+    private readonly HttpClient _client;
+
+    public BookApiIntegrationTests(WebApplicationFactory&lt;Program&gt; factory)
+    {
+        _factory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureServices(services =>
+            {
+                // Remove real database
+                var descriptor = services.SingleOrDefault(
+                    d => d.ServiceType == typeof(DbContextOptions&lt;AppDbContext&gt;));
+                if (descriptor != null)
+                {
+                    services.Remove(descriptor);
+                }
+
+                // Add in-memory database for testing
+                services.AddDbContext&lt;AppDbContext&gt;(options =>
+                {
+                    options.UseInMemoryDatabase("TestDb");
+                });
+
+                // Ensure PyNurseInjector registrations
+                services.AddServicesFrom("BookStore.Api.Services");
+                services.AddServicesFrom("BookStore.Api.Repositories");
+            });
+        });
+
+        _client = _factory.CreateClient();
+    }
+
+    [Fact]
+    public async Task GetBooks_ReturnsSuccessAndCorrectContentType()
+    {
+        // Act
+        var response = await _client.GetAsync("/api/books");
+
+        // Assert
+        response.EnsureSuccessStatusCode();
+        Assert.Equal("application/json; charset=utf-8", 
+            response.Content.Headers.ContentType.ToString());
+    }
+
+    [Fact]
+    public async Task CreateBook_WithValidData_ReturnsCreatedBook()
+    {
+        // Arrange
+        var newBook = new Book
+        {
+            Title = "Integration Test Book",
+            Author = "Test Author",
+            ISBN = "123-456-789",
+            Price = 29.99m
+        };
+
+        var json = JsonSerializer.Serialize(newBook);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        // Act
+        var response = await _client.PostAsync("/api/books", content);
+
+        // Assert
+        response.EnsureSuccessStatusCode();
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+        var responseContent = await response.Content.ReadAsStringAsync();
+        var createdBook = JsonSerializer.Deserialize&lt;Book&gt;(responseContent);
+        
+        Assert.NotNull(createdBook);
+        Assert.Equal(newBook.Title, createdBook.Title);
+        Assert.True(createdBook.Id > 0);
+    }
+}</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <section id="advanced-scenarios">
+                <h2><i class="fas fa-rocket"></i> Advanced Scenarios</h2>
+                <p>Complex use cases and advanced patterns with PyNurseInjector.</p>
+
+                <div class="example-section">
+                    <h3>Decorator Pattern</h3>
+                    <div class="code-block">
+                        <pre><code class="language-csharp">// Base service interface
+public interface ICacheService
+{
+    Task&lt;T&gt; GetAsync&lt;T&gt;(string key);
+    Task SetAsync&lt;T&gt;(string key, T value, TimeSpan? expiry = null);
+}
+
+// Primary implementation
+[RegisterAs(typeof(ICacheService))]
+public class RedisCacheService : ICacheService
+{
+    [InjectService] private IConnectionMultiplexer redis;
+    
+    public async Task&lt;T&gt; GetAsync&lt;T&gt;(string key)
+    {
+        var db = redis.GetDatabase();
+        var value = await db.StringGetAsync(key);
+        return value.HasValue ? JsonSerializer.Deserialize&lt;T&gt;(value) : default;
+    }
+    
+    public async Task SetAsync&lt;T&gt;(string key, T value, TimeSpan? expiry = null)
+    {
+        var db = redis.GetDatabase();
+        var json = JsonSerializer.Serialize(value);
+        await db.StringSetAsync(key, json, expiry);
+    }
+}
+
+// Decorator with logging
+[DontRegister] // Manual registration required for decorators
+public class LoggingCacheDecorator : ICacheService
+{
+    private readonly ICacheService _innerCache;
+    [InjectService] private ILogger&lt;LoggingCacheDecorator&gt; logger;
+
+    public LoggingCacheDecorator(ICacheService innerCache)
+    {
+        _innerCache = innerCache;
+    }
+
+    public async Task&lt;T&gt; GetAsync&lt;T&gt;(string key)
+    {
+        logger.LogDebug("Getting cache value for key: {Key}", key);
+        var value = await _innerCache.GetAsync&lt;T&gt;(key);
+        logger.LogDebug("Cache {Result} for key: {Key}", 
+            value != null ? "hit" : "miss", key);
+        return value;
+    }
+
+    public async Task SetAsync&lt;T&gt;(string key, T value, TimeSpan? expiry = null)
+    {
+        logger.LogDebug("Setting cache value for key: {Key}", key);
+        await _innerCache.SetAsync(key, value, expiry);
+    }
+}
+
+// Registration with decorator
+services.AddServicesFrom("MyApp.Services");
+services.Decorate&lt;ICacheService, LoggingCacheDecorator&gt;();</code></pre>
+                    </div>
+
+                    <h3>Factory Pattern</h3>
+                    <div class="code-block">
+                        <pre><code class="language-csharp">// Factory interface
+public interface IPaymentProcessorFactory
+{
+    IPaymentProcessor GetProcessor(PaymentMethod method);
+}
+
+// Payment processor interface
+public interface IPaymentProcessor
+{
+    Task&lt;PaymentResult&gt; ProcessPaymentAsync(PaymentRequest request);
+    PaymentMethod SupportedMethod { get; }
+}
+
+// Implementations
+[RegisterAs(typeof(IPaymentProcessor))]
+public class CreditCardProcessor : IPaymentProcessor
+{
+    [InjectService] private ICreditCardGateway gateway;
+    
+    public PaymentMethod SupportedMethod => PaymentMethod.CreditCard;
+    
+    public async Task&lt;PaymentResult&gt; ProcessPaymentAsync(PaymentRequest request)
+    {
+        // Process credit card payment
+        return await gateway.ChargeAsync(request);
+    }
+}
+
+[RegisterAs(typeof(IPaymentProcessor))]
+public class PayPalProcessor : IPaymentProcessor
+{
+    [InjectService] private IPayPalGateway gateway;
+    
+    public PaymentMethod SupportedMethod => PaymentMethod.PayPal;
+    
+    public async Task&lt;PaymentResult&gt; ProcessPaymentAsync(PaymentRequest request)
+    {
+        // Process PayPal payment
+        return await gateway.ProcessAsync(request);
+    }
+}
+
+// Factory implementation
+[RegisterAs(typeof(IPaymentProcessorFactory))]
+[ServiceLifeTime(ServiceLifetime.Singleton)]
+public class PaymentProcessorFactory : IPaymentProcessorFactory
+{
+    private readonly Dictionary&lt;PaymentMethod, IPaymentProcessor&gt; _processors;
+
+    public PaymentProcessorFactory(IEnumerable&lt;IPaymentProcessor&gt; processors)
+    {
+        _processors = processors.ToDictionary(p => p.SupportedMethod);
+    }
+
+    public IPaymentProcessor GetProcessor(PaymentMethod method)
+    {
+        if (!_processors.TryGetValue(method, out var processor))
+        {
+            throw new NotSupportedException($"Payment method {method} is not supported");
+        }
+        
+        return processor;
+    }
+}</code></pre>
+                    </div>
+
+                    <h3>Multi-Tenant Services</h3>
+                    <div class="code-block">
+                        <pre><code class="language-csharp">// Tenant context
+public interface ITenantContext
+{
+    string TenantId { get; }
+    string ConnectionString { get; }
+}
+
+// Multi-tenant repository
+public abstract class MultiTenantRepository&lt;T&gt; : IRepository&lt;T&gt; where T : class
+{
+    [InjectService] private ITenantContext tenantContext;
+    [InjectService] private IDbContextFactory&lt;AppDbContext&gt; contextFactory;
+    
+    protected AppDbContext GetDbContext()
+    {
+        var optionsBuilder = new DbContextOptionsBuilder&lt;AppDbContext&gt;();
+        optionsBuilder.UseSqlServer(tenantContext.ConnectionString);
+        return new AppDbContext(optionsBuilder.Options);
+    }
+    
+    public async Task&lt;T&gt; GetByIdAsync(int id)
+    {
+        using var context = GetDbContext();
+        return await context.Set&lt;T&gt;().FindAsync(id);
+    }
+    
+    // Other repository methods...
+}
+
+// Tenant-specific service
+[RegisterAs(typeof(IProductService))]
+[ServiceLifeTime(ServiceLifetime.Scoped)]
+public class TenantProductService : IProductService
+{
+    [InjectService] private ITenantContext tenantContext;
+    [InjectService] private IProductRepository productRepository;
+    [InjectService] private ICacheService cache;
+    
+    public async Task&lt;IEnumerable&lt;Product&gt;&gt; GetProductsAsync()
+    {
+        var cacheKey = $"products_{tenantContext.TenantId}";
+        
+        var cachedProducts = await cache.GetAsync&lt;IEnumerable&lt;Product&gt;&gt;(cacheKey);
+        if (cachedProducts != null)
+        {
+            return cachedProducts;
+        }
+        
+        var products = await productRepository.GetAllAsync();
+        await cache.SetAsync(cacheKey, products, TimeSpan.FromMinutes(5));
+        
+        return products;
+    }
+}</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <section id="migration-guide">
+                <h2><i class="fas fa-exchange-alt"></i> Migration Guide</h2>
+                <p>How to migrate existing projects to use PyNurseInjector.</p>
+
+                <div class="example-section">
+                    <h3>From Manual Registration</h3>
+                    <div class="migration-example">
+                        <h4>Before (Manual Registration)</h4>
+                        <div class="code-block">
+                            <pre><code class="language-csharp">// Startup.cs - Lots of manual registrations
+public void ConfigureServices(IServiceCollection services)
+{
+    // Services
+    services.AddScoped&lt;IUserService, UserService&gt;();
+    services.AddScoped&lt;IProductService, ProductService&gt;();
+    services.AddScoped&lt;IOrderService, OrderService&gt;();
+    services.AddScoped&lt;IPaymentService, PaymentService&gt;();
+    services.AddScoped&lt;IShippingService, ShippingService&gt;();
+    services.AddScoped&lt;IInventoryService, InventoryService&gt;();
+    services.AddScoped&lt;INotificationService, NotificationService&gt;();
+    
+    // Repositories
+    services.AddScoped&lt;IUserRepository, UserRepository&gt;();
+    services.AddScoped&lt;IProductRepository, ProductRepository&gt;();
+    services.AddScoped&lt;IOrderRepository, OrderRepository&gt;();
+    
+    // Singletons
+    services.AddSingleton&lt;ICacheService, RedisCacheService&gt;();
+    services.AddSingleton&lt;IConfigurationService, ConfigurationService&gt;();
+    
+    // ... many more registrations
+}</code></pre>
+                        </div>
+
+                        <h4>After (PyNurseInjector)</h4>
+                        <div class="code-block">
+                            <pre><code class="language-csharp">// Program.cs - Clean and simple
+builder.Host.UseDotNurseInjector(); // Enable property injection
+
+// Register all services automatically
+builder.Services.AddServicesFrom("MyApp.Services", ServiceLifetime.Scoped);
+builder.Services.AddServicesFrom("MyApp.Repositories", ServiceLifetime.Scoped);
+
+// Special cases only
+builder.Services.AddServicesFrom("MyApp.Services.Cache", ServiceLifetime.Singleton);</code></pre>
+                        </div>
+                    </div>
+
+                    <h3>From Constructor Injection</h3>
+                    <div class="migration-example">
+                        <h4>Before (Constructor Injection)</h4>
+                        <div class="code-block">
+                            <pre><code class="language-csharp">public class OrderController : Controller
+{
+    private readonly IOrderService _orderService;
+    private readonly IUserService _userService;
+    private readonly IProductService _productService;
+    private readonly IPaymentService _paymentService;
+    private readonly IShippingService _shippingService;
+    private readonly ILogger&lt;OrderController&gt; _logger;
+    
+    public OrderController(
+        IOrderService orderService,
+        IUserService userService,
+        IProductService productService,
+        IPaymentService paymentService,
+        IShippingService shippingService,
+        ILogger&lt;OrderController&gt; logger)
+    {
+        _orderService = orderService;
+        _userService = userService;
+        _productService = productService;
+        _paymentService = paymentService;
+        _shippingService = shippingService;
+        _logger = logger;
+    }
+    
+    // Methods using the injected services
+}</code></pre>
+                        </div>
+
+                        <h4>After (Property Injection)</h4>
+                        <div class="code-block">
+                            <pre><code class="language-csharp">public class OrderController : Controller
+{
+    [InjectService] public IOrderService OrderService { get; private set; }
+    [InjectService] public IUserService UserService { get; private set; }
+    [InjectService] public IProductService ProductService { get; private set; }
+    [InjectService] public IPaymentService PaymentService { get; private set; }
+    [InjectService] public IShippingService ShippingService { get; private set; }
+    [InjectService] public ILogger&lt;OrderController&gt; Logger { get; private set; }
+    
+    // No constructor needed!
+    // Methods can directly use the properties
+}</code></pre>
+                        </div>
+                    </div>
+
+                    <h3>Step-by-Step Migration</h3>
+                    <ol class="migration-steps">
+                        <li>
+                            <strong>Install PyNurseInjector packages</strong>
+                            <pre><code class="language-bash">dotnet add package DotNurse.Injector
+dotnet add package DotNurse.Injector.AspNetCore</code></pre>
+                        </li>
+                        <li>
+                            <strong>Enable property injection in Program.cs</strong>
+                            <pre><code class="language-csharp">builder.Host.UseDotNurseInjector();</code></pre>
+                        </li>
+                        <li>
+                            <strong>Replace manual registrations with namespace registration</strong>
+                            <pre><code class="language-csharp">// Remove individual registrations
+// Add namespace-based registration
+services.AddServicesFrom("YourApp.Services");</code></pre>
+                        </li>
+                        <li>
+                            <strong>Add attributes to special cases</strong>
+                            <pre><code class="language-csharp">[ServiceLifeTime(ServiceLifetime.Singleton)]
+public class CacheService : ICacheService { }</code></pre>
+                        </li>
+                        <li>
+                            <strong>Convert constructors to property injection (optional)</strong>
+                            <pre><code class="language-csharp">[InjectService] 
+public IMyService MyService { get; private set; }</code></pre>
+                        </li>
+                        <li>
+                            <strong>Test thoroughly</strong>
+                            <ul>
+                                <li>Verify all services are registered correctly</li>
+                                <li>Check service lifetimes</li>
+                                <li>Ensure property injection works</li>
+                            </ul>
+                        </li>
+                    </ol>
+                </div>
+            </section>
+
+            <div class="nav-buttons">
+                <a href="features.html" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Features
+                </a>
+                <a href="api-reference.html" class="btn btn-primary">
+                    API Reference <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>PyNurseInjector</h4>
+                    <p>A lightweight dependency injection library for .NET applications.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Documentation</h4>
+                    <ul>
+                        <li><a href="getting-started.html">Getting Started</a></li>
+                        <li><a href="features.html">Features</a></li>
+                        <li><a href="examples.html">Examples</a></li>
+                        <li><a href="api-reference.html">API Reference</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Resources</h4>
+                    <ul>
+                        <li><a href="https://github.com/enisn/DotNurseInjector" target="_blank">GitHub Repository</a></li>
+                        <li><a href="https://www.nuget.org/packages/DotNurse.Injector/" target="_blank">NuGet Package</a></li>
+                        <li><a href="https://github.com/enisn/DotNurseInjector/issues" target="_blank">Report Issues</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 PyNurseInjector. Documentation for DotNurseInjector by Enis Necipoglu.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-csharp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="js/script.js"></script>
+</body>
+</html>

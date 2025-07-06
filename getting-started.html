@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Getting Started - PyNurseInjector</title>
+    <meta name="description" content="Learn how to get started with PyNurseInjector (DotNurseInjector) - installation, setup, and basic usage.">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <i class="fas fa-syringe"></i>
+                <span>PyNurseInjector</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="getting-started.html" class="active">Getting Started</a></li>
+                <li><a href="features.html">Features</a></li>
+                <li><a href="examples.html">Examples</a></li>
+                <li><a href="api-reference.html">API Reference</a></li>
+                <li><a href="https://github.com/enisn/DotNurseInjector" target="_blank"><i class="fab fa-github"></i></a></li>
+            </ul>
+            <div class="nav-toggle">
+                <i class="fas fa-bars"></i>
+            </div>
+        </div>
+    </nav>
+
+    <div class="docs-container">
+        <aside class="docs-sidebar">
+            <h3>Getting Started</h3>
+            <ul>
+                <li><a href="#installation">Installation</a></li>
+                <li><a href="#basic-setup">Basic Setup</a></li>
+                <li><a href="#namespace-registration">Namespace Registration</a></li>
+                <li><a href="#attribute-registration">Attribute Registration</a></li>
+                <li><a href="#property-injection">Property Injection</a></li>
+                <li><a href="#configuration">Configuration Options</a></li>
+                <li><a href="#best-practices">Best Practices</a></li>
+            </ul>
+        </aside>
+
+        <main class="docs-content">
+            <h1>Getting Started with PyNurseInjector</h1>
+            
+            <section id="installation">
+                <h2><i class="fas fa-download"></i> Installation</h2>
+                <p>PyNurseInjector is available as NuGet packages. You'll need to install the core package and, if you're using ASP.NET Core, the ASP.NET Core integration package.</p>
+                
+                <h3>Core Library</h3>
+                <div class="code-block">
+                    <pre><code class="language-bash"># Package Manager Console
+Install-Package DotNurse.Injector
+
+# .NET CLI
+dotnet add package DotNurse.Injector
+
+# PackageReference
+&lt;PackageReference Include="DotNurse.Injector" Version="2.5.0" /&gt;</code></pre>
+                </div>
+
+                <h3>ASP.NET Core Integration</h3>
+                <div class="code-block">
+                    <pre><code class="language-bash"># Package Manager Console
+Install-Package DotNurse.Injector.AspNetCore
+
+# .NET CLI
+dotnet add package DotNurse.Injector.AspNetCore
+
+# PackageReference
+&lt;PackageReference Include="DotNurse.Injector.AspNetCore" Version="2.5.0" /&gt;</code></pre>
+                </div>
+            </section>
+
+            <section id="basic-setup">
+                <h2><i class="fas fa-cog"></i> Basic Setup</h2>
+                <p>Setting up PyNurseInjector in your ASP.NET Core application is straightforward. You need to configure it in two places: Program.cs and Startup.cs.</p>
+
+                <h3>1. Enable Property Injection (Program.cs)</h3>
+                <div class="code-block">
+                    <pre><code class="language-csharp">using DotNurse.Injector.AspNetCore;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Enable PyNurseInjector property injection
+builder.Host.UseDotNurseInjector();
+
+// Add services to the container
+builder.Services.AddControllers();
+
+var app = builder.Build();
+
+// Configure the HTTP request pipeline
+app.UseRouting();
+app.MapControllers();
+
+app.Run();</code></pre>
+                </div>
+
+                <h3>2. Register Services (Startup.cs or Program.cs)</h3>
+                <div class="code-block">
+                    <pre><code class="language-csharp">using DotNurse.Injector;
+
+// Option 1: Register all services from a namespace
+builder.Services.AddServicesFrom("MyApp.Services");
+
+// Option 2: Register only attributed services
+builder.Services.AddServicesByAttributes();
+
+// Option 3: Both!
+builder.Services.AddServicesFrom("MyApp.Services");
+builder.Services.AddServicesByAttributes();</code></pre>
+                </div>
+            </section>
+
+            <section id="namespace-registration">
+                <h2><i class="fas fa-folder-tree"></i> Namespace-Based Registration</h2>
+                <p>One of the most powerful features of PyNurseInjector is the ability to automatically register all services from a namespace.</p>
+
+                <h3>Basic Namespace Registration</h3>
+                <div class="code-block">
+                    <pre><code class="language-csharp">// Register all types from a namespace as Transient (default)
+services.AddServicesFrom("MyApp.Services");
+
+// Specify a different lifetime
+services.AddServicesFrom("MyApp.Repositories", ServiceLifetime.Scoped);
+
+// Include sub-namespaces
+services.AddServicesFrom("MyApp", deep: true);</code></pre>
+                </div>
+
+                <h3>How It Works</h3>
+                <div class="info-box">
+                    <i class="fas fa-info-circle"></i>
+                    <p>PyNurseInjector scans the specified namespace and:</p>
+                    <ul>
+                        <li>Finds all classes that implement interfaces</li>
+                        <li>Registers each implementation with its interface(s)</li>
+                        <li>Skips types marked with [DontRegister]</li>
+                        <li>Respects [ServiceLifeTime] attributes</li>
+                    </ul>
+                </div>
+
+                <h3>Example Project Structure</h3>
+                <div class="code-block">
+                    <pre><code class="language-plaintext">MyApp.Services/
+├── UserService.cs        → IUserService
+├── ProductService.cs     → IProductService
+├── OrderService.cs       → IOrderService
+└── EmailService.cs       → IEmailService
+
+// One line registers all of them!
+services.AddServicesFrom("MyApp.Services");</code></pre>
+                </div>
+            </section>
+
+            <section id="attribute-registration">
+                <h2><i class="fas fa-tags"></i> Attribute-Based Registration</h2>
+                <p>For more control over individual services, use attributes to specify exactly how each service should be registered.</p>
+
+                <h3>Available Attributes</h3>
+                
+                <h4>[RegisterAs] Attribute</h4>
+                <div class="code-block">
+                    <pre><code class="language-csharp">// Register with a specific interface
+[RegisterAs(typeof(IEmailService))]
+public class EmailService : IEmailService, INotificationService
+{
+    // Will only be registered as IEmailService
+}
+
+// Register with multiple interfaces
+[RegisterAs(typeof(IEmailService))]
+[RegisterAs(typeof(INotificationService), ServiceLifetime.Singleton)]
+public class EmailService : IEmailService, INotificationService
+{
+    // Registered as both interfaces with different lifetimes
+}</code></pre>
+                </div>
+
+                <h4>[ServiceLifeTime] Attribute</h4>
+                <div class="code-block">
+                    <pre><code class="language-csharp">// Override the default lifetime
+[ServiceLifeTime(ServiceLifetime.Singleton)]
+public class ConfigurationService : IConfigurationService
+{
+    // Registered as Singleton instead of default Transient
+}</code></pre>
+                </div>
+
+                <h4>[DontRegister] Attribute</h4>
+                <div class="code-block">
+                    <pre><code class="language-csharp">// Exclude from automatic registration
+[DontRegister]
+public class InternalHelper : IHelper
+{
+    // Won't be registered even if in scanned namespace
+}</code></pre>
+                </div>
+
+                <h3>Enabling Attribute Registration</h3>
+                <div class="code-block">
+                    <pre><code class="language-csharp">// Only register types that have [RegisterAs] attribute
+services.AddServicesByAttributes();
+
+// Or scan specific assemblies
+services.AddServicesByAttributes(typeof(MyService).Assembly);</code></pre>
+                </div>
+            </section>
+
+            <section id="property-injection">
+                <h2><i class="fas fa-plug"></i> Property Injection</h2>
+                <p>PyNurseInjector allows you to inject dependencies directly into properties and fields, eliminating constructor clutter.</p>
+
+                <h3>Basic Property Injection</h3>
+                <div class="code-block">
+                    <pre><code class="language-csharp">public class ProductController : Controller
+{
+    [InjectService] 
+    public IProductService ProductService { get; private set; }
+    
+    [InjectService] 
+    public ILogger&lt;ProductController&gt; Logger { get; private set; }
+    
+    // No constructor needed!
+    
+    public IActionResult Index()
+    {
+        Logger.LogInformation("Loading products");
+        var products = ProductService.GetAll();
+        return View(products);
+    }
+}</code></pre>
+                </div>
+
+                <h3>Field Injection</h3>
+                <div class="code-block">
+                    <pre><code class="language-csharp">public class OrderService : IOrderService
+{
+    [InjectService] 
+    private readonly IProductService productService;
+    
+    [InjectService] 
+    protected IUserService userService;
+    
+    public Order CreateOrder(int userId, List&lt;int&gt; productIds)
+    {
+        var user = userService.GetById(userId);
+        var products = productService.GetByIds(productIds);
+        // Create order logic...
+    }
+}</code></pre>
+                </div>
+
+                <div class="warning-box">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p><strong>Important:</strong> Property injection requires calling <code>UseDotNurseInjector()</code> on your host builder. Without this, the [InjectService] attributes will be ignored.</p>
+                </div>
+            </section>
+
+            <section id="configuration">
+                <h2><i class="fas fa-sliders-h"></i> Configuration Options</h2>
+                <p>PyNurseInjector provides extensive configuration options for fine-tuning service registration.</p>
+
+                <h3>DotNurseInjectorOptions</h3>
+                <div class="code-block">
+                    <pre><code class="language-csharp">services.AddServicesFrom("MyApp.Services", ServiceLifetime.Scoped, options =>
+{
+    // Select which interface to use when multiple exist
+    options.SelectInterface = interfaces => 
+        interfaces.FirstOrDefault(i => i.Name.StartsWith("I"));
+    
+    // Filter implementations
+    options.SelectImplementation = type => 
+        !type.Name.Contains("Legacy");
+    
+    // Only register types inheriting from a base class
+    options.ImplementationBase = typeof(BaseService);
+    
+    // Also register the implementation type itself
+    options.SelfRegister = true;
+});</code></pre>
+                </div>
+
+                <h3>Configuration Examples</h3>
+                
+                <h4>Repository Pattern Configuration</h4>
+                <div class="code-block">
+                    <pre><code class="language-csharp">services.AddServicesFrom("MyApp.Data.Repositories", ServiceLifetime.Scoped, options =>
+{
+    options.ImplementationBase = typeof(BaseRepository);
+    options.SelectInterface = interfaces => 
+        interfaces.FirstOrDefault(i => i.IsGenericType && 
+            i.GetGenericTypeDefinition() == typeof(IRepository&lt;&gt;));
+});</code></pre>
+                </div>
+
+                <h4>Service Layer Configuration</h4>
+                <div class="code-block">
+                    <pre><code class="language-csharp">services.AddServicesFrom("MyApp.Services", ServiceLifetime.Transient, options =>
+{
+    options.SelectImplementation = type => 
+        type.Name.EndsWith("Service") && !type.IsAbstract;
+    options.SelfRegister = false; // Only register interfaces
+});</code></pre>
+                </div>
+            </section>
+
+            <section id="best-practices">
+                <h2><i class="fas fa-check-circle"></i> Best Practices</h2>
+                
+                <h3>1. Organize by Feature</h3>
+                <div class="code-block">
+                    <pre><code class="language-plaintext">MyApp/
+├── Features/
+│   ├── Users/
+│   │   ├── IUserService.cs
+│   │   ├── UserService.cs
+│   │   └── UserRepository.cs
+│   └── Products/
+│       ├── IProductService.cs
+│       ├── ProductService.cs
+│       └── ProductRepository.cs</code></pre>
+                </div>
+
+                <h3>2. Use Consistent Naming</h3>
+                <div class="code-block">
+                    <pre><code class="language-csharp">// Good: Interface and implementation names match
+public interface IUserService { }
+public class UserService : IUserService { }
+
+// Avoid: Inconsistent naming
+public interface IUserManager { }
+public class UserSvc : IUserManager { } // Hard to auto-register</code></pre>
+                </div>
+
+                <h3>3. Explicit Lifetime for Stateful Services</h3>
+                <div class="code-block">
+                    <pre><code class="language-csharp">[ServiceLifeTime(ServiceLifetime.Singleton)]
+public class CacheService : ICacheService
+{
+    private readonly Dictionary&lt;string, object&gt; _cache = new();
+    // Singleton because it maintains state
+}</code></pre>
+                </div>
+
+                <h3>4. Use [DontRegister] for Internal Types</h3>
+                <div class="code-block">
+                    <pre><code class="language-csharp">[DontRegister]
+internal class ServiceHelper
+{
+    // Internal utility class not meant for DI
+}</code></pre>
+                </div>
+
+                <h3>5. Combine Registration Methods</h3>
+                <div class="code-block">
+                    <pre><code class="language-csharp">// Register most services by namespace
+services.AddServicesFrom("MyApp.Services");
+
+// Register special cases with attributes
+services.AddServicesByAttributes();
+
+// Manual registration for third-party types
+services.AddSingleton&lt;IMemoryCache, MemoryCache&gt;();</code></pre>
+                </div>
+            </section>
+
+            <div class="nav-buttons">
+                <a href="index.html" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Home
+                </a>
+                <a href="features.html" class="btn btn-primary">
+                    Features <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>PyNurseInjector</h4>
+                    <p>A lightweight dependency injection library for .NET applications.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Documentation</h4>
+                    <ul>
+                        <li><a href="getting-started.html">Getting Started</a></li>
+                        <li><a href="features.html">Features</a></li>
+                        <li><a href="examples.html">Examples</a></li>
+                        <li><a href="api-reference.html">API Reference</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Resources</h4>
+                    <ul>
+                        <li><a href="https://github.com/enisn/DotNurseInjector" target="_blank">GitHub Repository</a></li>
+                        <li><a href="https://www.nuget.org/packages/DotNurse.Injector/" target="_blank">NuGet Package</a></li>
+                        <li><a href="https://github.com/enisn/DotNurseInjector/issues" target="_blank">Report Issues</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 PyNurseInjector. Documentation for DotNurseInjector by Enis Necipoglu.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-csharp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+    <script src="js/script.js"></script>
+</body>
+</html>

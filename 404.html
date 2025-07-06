@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Page Not Found | PyNurseInjector</title>
+    <meta name="description" content="The page you're looking for doesn't exist. Return to PyNurseInjector documentation.">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .error-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        .error-content {
+            max-width: 600px;
+        }
+        
+        .error-code {
+            font-size: 8rem;
+            font-weight: bold;
+            margin: 0;
+            line-height: 1;
+            opacity: 0.9;
+        }
+        
+        .error-title {
+            font-size: 2.5rem;
+            margin: 1rem 0;
+        }
+        
+        .error-message {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            opacity: 0.8;
+        }
+        
+        .error-icon {
+            font-size: 4rem;
+            margin-bottom: 2rem;
+            opacity: 0.8;
+        }
+        
+        .error-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .error-actions .btn {
+            background-color: rgba(255, 255, 255, 0.2);
+            border: 2px solid white;
+        }
+        
+        .error-actions .btn:hover {
+            background-color: white;
+            color: #764ba2;
+        }
+        
+        .suggestions {
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .suggestions h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .suggestions ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .suggestions li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .suggestions a {
+            color: white;
+            text-decoration: underline;
+            opacity: 0.9;
+        }
+        
+        .suggestions a:hover {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-page">
+        <div class="error-content">
+            <div class="error-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h1 class="error-code">404</h1>
+            <h2 class="error-title">Page Not Found</h2>
+            <p class="error-message">
+                Oops! The page you're looking for seems to have been injected somewhere else. 
+                Don't worry, we'll help you find your way back.
+            </p>
+            
+            <div class="error-actions">
+                <a href="index.html" class="btn btn-lg">
+                    <i class="fas fa-home"></i> Go Home
+                </a>
+                <a href="getting-started.html" class="btn btn-lg">
+                    <i class="fas fa-book"></i> Documentation
+                </a>
+            </div>
+            
+            <div class="suggestions">
+                <h3>Popular Pages</h3>
+                <ul>
+                    <li><a href="getting-started.html">Getting Started Guide</a></li>
+                    <li><a href="features.html">Features Overview</a></li>
+                    <li><a href="examples.html">Code Examples</a></li>
+                    <li><a href="api-reference.html">API Reference</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Redirect to home if accessed directly via file protocol
+        if (window.location.protocol === 'file:') {
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

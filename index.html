@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PyNurseInjector - Lightweight Dependency Injection for .NET</title>
+    <meta name="description" content="PyNurseInjector (DotNurseInjector) - A simple, lightweight and useful dependency injection library for .NET with attribute-based registration and property injection support.">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <i class="fas fa-syringe"></i>
+                <span>PyNurseInjector</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html" class="active">Home</a></li>
+                <li><a href="getting-started.html">Getting Started</a></li>
+                <li><a href="features.html">Features</a></li>
+                <li><a href="examples.html">Examples</a></li>
+                <li><a href="api-reference.html">API Reference</a></li>
+                <li><a href="https://github.com/enisn/DotNurseInjector" target="_blank"><i class="fab fa-github"></i></a></li>
+            </ul>
+            <div class="nav-toggle">
+                <i class="fas fa-bars"></i>
+            </div>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <div class="container">
+            <h1 class="hero-title">
+                <i class="fas fa-syringe"></i>
+                PyNurseInjector
+            </h1>
+            <p class="hero-subtitle">A Simple, Lightweight & Useful Dependency Injector for .NET</p>
+            <p class="hero-description">
+                Reduce boilerplate code and simplify dependency injection with attribute-based registration and property injection.
+            </p>
+            <div class="hero-actions">
+                <a href="getting-started.html" class="btn btn-primary">
+                    <i class="fas fa-rocket"></i> Get Started
+                </a>
+                <a href="https://github.com/enisn/DotNurseInjector" class="btn btn-secondary" target="_blank">
+                    <i class="fab fa-github"></i> View on GitHub
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <section class="features-preview">
+        <div class="container">
+            <h2 class="section-title">Why PyNurseInjector?</h2>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-magic"></i>
+                    </div>
+                    <h3>Zero Configuration</h3>
+                    <p>Automatically register services from namespaces without manual configuration.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-tags"></i>
+                    </div>
+                    <h3>Attribute-Based</h3>
+                    <p>Use simple attributes to control service registration and lifetime.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-plug"></i>
+                    </div>
+                    <h3>Property Injection</h3>
+                    <p>Inject dependencies directly into properties and fields with [InjectService].</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-feather"></i>
+                    </div>
+                    <h3>Lightweight</h3>
+                    <p>Minimal overhead with maximum functionality. No heavy frameworks needed.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="code-example">
+        <div class="container">
+            <h2 class="section-title">Quick Example</h2>
+            <div class="code-tabs">
+                <div class="tab-buttons">
+                    <button class="tab-button active" data-tab="registration">Registration</button>
+                    <button class="tab-button" data-tab="attribute">Attributes</button>
+                    <button class="tab-button" data-tab="injection">Property Injection</button>
+                </div>
+                <div class="tab-content">
+                    <div class="tab-pane active" id="registration">
+                        <pre><code class="language-csharp">// Register all services from a namespace
+services.AddServicesFrom("MyApp.Services");
+
+// Or with custom configuration
+services.AddServicesFrom("MyApp.Repositories", ServiceLifetime.Scoped, opts =>
+{
+    opts.SelectInterface = interfaces => interfaces.FirstOrDefault(x => x.Name.StartsWith("I"));
+    opts.ImplementationBase = typeof(BaseRepository);
+});</code></pre>
+                    </div>
+                    <div class="tab-pane" id="attribute">
+                        <pre><code class="language-csharp">[RegisterAs(typeof(IBookService))]
+[ServiceLifeTime(ServiceLifetime.Singleton)]
+public class BookService : IBookService
+{
+    // Your implementation
+}
+
+[DontRegister] // Exclude from automatic registration
+public class InternalService { }</code></pre>
+                    </div>
+                    <div class="tab-pane" id="injection">
+                        <pre><code class="language-csharp">public class BookController : Controller
+{
+    [InjectService] 
+    public IBookService BookService { get; private set; }
+    
+    [InjectService] 
+    protected ILogger&lt;BookController&gt; logger;
+    
+    // No constructor injection needed!
+    public IActionResult Index()
+    {
+        var books = BookService.GetAll();
+        logger.LogInformation("Retrieved {Count} books", books.Count);
+        return View(books);
+    }
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="installation">
+        <div class="container">
+            <h2 class="section-title">Installation</h2>
+            <div class="install-options">
+                <div class="install-option">
+                    <h3>Package Manager</h3>
+                    <pre><code class="language-bash">Install-Package DotNurse.Injector
+Install-Package DotNurse.Injector.AspNetCore</code></pre>
+                </div>
+                <div class="install-option">
+                    <h3>.NET CLI</h3>
+                    <pre><code class="language-bash">dotnet add package DotNurse.Injector
+dotnet add package DotNurse.Injector.AspNetCore</code></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="comparison">
+        <div class="container">
+            <h2 class="section-title">Before vs After</h2>
+            <div class="comparison-grid">
+                <div class="comparison-item">
+                    <h3>❌ Traditional Approach</h3>
+                    <pre><code class="language-csharp">// Startup.cs - Manual registration hell
+services.AddScoped&lt;IUserService, UserService&gt;();
+services.AddScoped&lt;IProductService, ProductService&gt;();
+services.AddScoped&lt;IOrderService, OrderService&gt;();
+services.AddScoped&lt;IPaymentService, PaymentService&gt;();
+services.AddScoped&lt;IShippingService, ShippingService&gt;();
+// ... 50 more lines
+
+// Constructor injection clutter
+public class OrderController : Controller
+{
+    private readonly IUserService _userService;
+    private readonly IOrderService _orderService;
+    private readonly IPaymentService _paymentService;
+    
+    public OrderController(
+        IUserService userService,
+        IOrderService orderService,
+        IPaymentService paymentService)
+    {
+        _userService = userService;
+        _orderService = orderService;
+        _paymentService = paymentService;
+    }
+}</code></pre>
+                </div>
+                <div class="comparison-item">
+                    <h3>✅ With PyNurseInjector</h3>
+                    <pre><code class="language-csharp">// Startup.cs - One line!
+services.AddServicesFrom("MyApp.Services");
+
+// Clean controllers with property injection
+public class OrderController : Controller
+{
+    [InjectService] public IUserService UserService { get; private set; }
+    [InjectService] public IOrderService OrderService { get; private set; }
+    [InjectService] public IPaymentService PaymentService { get; private set; }
+    
+    // No constructor needed!
+}</code></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta">
+        <div class="container">
+            <h2>Ready to Simplify Your Dependency Injection?</h2>
+            <p>Join developers who are writing cleaner, more maintainable .NET applications.</p>
+            <div class="cta-buttons">
+                <a href="getting-started.html" class="btn btn-primary btn-lg">
+                    <i class="fas fa-book"></i> Read Documentation
+                </a>
+                <a href="examples.html" class="btn btn-secondary btn-lg">
+                    <i class="fas fa-code"></i> View Examples
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>PyNurseInjector</h4>
+                    <p>A lightweight dependency injection library for .NET applications.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Documentation</h4>
+                    <ul>
+                        <li><a href="getting-started.html">Getting Started</a></li>
+                        <li><a href="features.html">Features</a></li>
+                        <li><a href="examples.html">Examples</a></li>
+                        <li><a href="api-reference.html">API Reference</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Resources</h4>
+                    <ul>
+                        <li><a href="https://github.com/enisn/DotNurseInjector" target="_blank">GitHub Repository</a></li>
+                        <li><a href="https://www.nuget.org/packages/DotNurse.Injector/" target="_blank">NuGet Package</a></li>
+                        <li><a href="https://github.com/enisn/DotNurseInjector/issues" target="_blank">Report Issues</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 PyNurseInjector. Documentation for DotNurseInjector by Enis Necipoglu.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-csharp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="js/script.js"></script>
+</body>
+</html>
